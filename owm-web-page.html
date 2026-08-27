@@ -331,9 +331,7 @@
       if (!form) return;
       var statusEl = document.getElementById("owmIntakeStatus");
       var button = document.getElementById("owmIntakeSubmit");
-      var driveEndpoint = /onewinemarket\.com$/i.test(location.hostname)
-        ? "https://owm-supplier-intake.vercel.app/api/submit"
-        : "/api/submit";
+      var driveEndpoint = "https://owm-supplier-intake.vercel.app/api/submit";
 
       function setStatus(kind, text) {
         statusEl.className = "owm-status is-on " + (kind === "ok" ? "is-ok" : "is-err");
