@@ -331,7 +331,7 @@
       if (!form) return;
       var statusEl = document.getElementById("owmIntakeStatus");
       var button = document.getElementById("owmIntakeSubmit");
-      var endpoint = /onewinemarket\.com$/i.test(location.hostname)
+      var driveEndpoint = /onewinemarket\.com$/i.test(location.hostname)
         ? "https://owm-supplier-intake.vercel.app/api/submit"
         : "/api/submit";
 
@@ -340,29 +340,75 @@
         statusEl.textContent = text;
       }
 
+      function postJson(url, payload) {
+        return fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(payload)
+        }).then(function (res) { return res.json().catch(function () { return {}; }).then(function (json) { return { ok: res.ok, json: json }; }); });
+      }
+
+      function fieldsObject(data) {
+        var obj = {};
+        data.forEach(function (value, key) {
+          if (key === "bottle_image" || key === "extra_images" || key === "documents") return;
+          if (obj[key]) obj[key] = [].concat(obj[key], value);
+          else obj[key] = value;
+        });
+        return obj;
+      }
+
       form.addEventListener("submit", function (event) {
         event.preventDefault();
         var data = new FormData(form);
+        var fields = fieldsObject(data);
+        var wine = (fields.product_name || fields.wine_name || fields.brand || "New product").trim();
+        var supplier = (fields.supplier_company || fields.contact_name || "Supplier").trim();
         button.disabled = true;
         button.textContent = "Sending…";
-        setStatus("ok", "Uploading to Google Drive and sending the emails…");
-        fetch(endpoint, { method: "POST", body: data })
-          .then(function (res) { return res.json().then(function (json) { return { res: res, json: json }; }); })
-          .then(function (result) {
-            if (!result.res.ok || !result.json.ok) {
-              throw new Error(result.json.error || "The intake server could not finish this submission.");
-            }
-            var extra = result.json.folderUrl ? " Drive folder: " + result.json.folderUrl : "";
+        setStatus("ok", "Sending emails and filing documents…");
+
+        var notify = {
+          _subject: "[Supplier intake] " + supplier + " — " + wine,
+          _replyto: fields.email || "",
+          _cc: "erika@onewinemarket.com,info@shopwineslash.com",
+          _template: "box",
+          name: fields.contact_name || supplier,
+          email: fields.email || "info@onewinemarket.com",
+          company: fields.supplier_company || "",
+          product: wine,
+          message: Object.keys(fields).filter(function (k) { return fields[k] && k.charAt(0) !== "_"; }).map(function (k) { return k + ": " + fields[k]; }).join("\n")
+        };
+        if (fields.email) {
+          notify._autoresponse = "Thank you for sending " + wine + " to OneWineMarket. We received your submission and will use it to set the product up in the account catalog. The team has been notified at info@onewinemarket.com.";
+        }
+
+        var emailJobs = [
+          postJson("https://formspree.io/f/mykwrvny", notify),
+          postJson("https://formsubmit.co/ajax/info@onewinemarket.com", notify)
+        ];
+        var driveJob = fetch(driveEndpoint, { method: "POST", body: data })
+          .then(function (res) { return res.json().catch(function () { return {}; }).then(function (json) { return { ok: res.ok, json: json }; }); })
+          .catch(function () { return { ok: false, json: {} }; });
+
+        Promise.all([Promise.all(emailJobs), driveJob]).then(function (results) {
+          var emails = results[0];
+          var drive = results[1];
+          var emailOk = emails.some(function (r) { return r.ok || (r.json && (r.json.ok || r.json.success)); });
+          var driveOk = drive.ok && drive.json && drive.json.ok;
+          if (emailOk || driveOk) {
+            var extra = driveOk && drive.json.folderUrl ? " Drive folder: " + drive.json.folderUrl : "";
             setStatus("ok", "Thank you. We received this for account setup and emailed the team." + extra);
             form.reset();
-          })
-          .catch(function (err) {
-            setStatus("err", err.message || "Something went wrong. Email info@onewinemarket.com and we will take it from there.");
-          })
-          .finally(function () {
-            button.disabled = false;
-            button.textContent = "Send product to OneWineMarket";
-          });
+          } else {
+            throw new Error((drive.json && drive.json.error) || "The submission did not go through. Email info@onewinemarket.com and we will take it from there.");
+          }
+        }).catch(function (err) {
+          setStatus("err", err.message || "Something went wrong. Email info@onewinemarket.com and we will take it from there.");
+        }).finally(function () {
+          button.disabled = false;
+          button.textContent = "Send product to OneWineMarket";
+        });
       });
     })();
   </script>
