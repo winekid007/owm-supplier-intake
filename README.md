@@ -9,6 +9,18 @@ Suppliers send product information and files. Each submission:
 
 All form fields are optional.
 
-Live form (Vercel): after deploy, `https://owm-supplier-intake.vercel.app/`
+## Live URLs
 
-OneWineMarket web page HTML to paste into BigCommerce: `owm-web-page.html` at URL `/supplier-product/`.
+- Form: https://winekid007.github.io/owm-supplier-intake/index.html
+- Drive API: https://owm-supplier-intake.vercel.app/api/submit
+- BigCommerce paste-in: `owm-web-page.html` (full branded page) or `owm-bc-iframe.html` (iframe wrapper)
+- Target OneWineMarket URL: `/supplier-product/`
+
+## Vercel Drive env
+
+Set these on project `owm-supplier-intake` so file uploads land in Google Drive:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REFRESH_TOKEN`
+- `DRIVE_PARENT_FOLDER_ID=1pmImjkziGdmUpCo2TWWc5wHcwLXl1EbX`
