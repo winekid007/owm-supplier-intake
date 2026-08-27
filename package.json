@@ -1,0 +1,12 @@
+{
+  "name": "owm-supplier-intake",
+  "private": true,
+  "version": "1.0.0",
+  "description": "OneWineMarket supplier product intake: Drive upload plus notify and thank-you emails.",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0"
+  }
+}
